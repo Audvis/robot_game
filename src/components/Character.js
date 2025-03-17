@@ -74,7 +74,7 @@ function Model() {
       <primitive 
         ref={modelRef}
         object={scene} 
-        position={[position.x, 1, position.z]}
+        position={[position.x, 0, position.z]} // Changed y position from 1 to 0
         scale={[2, 2, 2]}
         rotation={[0, Math.PI, 0]}
       />
