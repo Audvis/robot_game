@@ -6,7 +6,13 @@ function App() {
   return (
     <div className="App" style={{ width: '100vw', height: '100vh' }}>
       <Canvas
-        camera={{ position: [0, 2, 5], fov: 75 }}
+        camera={{ position: [5, 5, 5], fov: 75 }}
+        shadows
+        gl={{ 
+          antialias: true,
+          preserveDrawingBuffer: true
+        }}
+        dpr={[1, 2]}
       >
         <Scene />
       </Canvas>
