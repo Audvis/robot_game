@@ -50,14 +50,28 @@ function Model() {
     };
   }, []);
 
+  const [rotation, setRotation] = useState(Math.PI);
+
   useFrame((state, delta) => {
     const isMoving = Object.values(keys).some(key => key);
     
-    // Handle movement first
-    if (keys.w) setPosition(prev => ({ ...prev, z: prev.z - moveSpeed }));
-    if (keys.s) setPosition(prev => ({ ...prev, z: prev.z + moveSpeed }));
-    if (keys.a) setPosition(prev => ({ ...prev, x: prev.x - moveSpeed }));
-    if (keys.d) setPosition(prev => ({ ...prev, x: prev.x + moveSpeed }));
+    // Handle movement and rotation
+    if (keys.w) {
+      setPosition(prev => ({ ...prev, z: prev.z - moveSpeed }));
+      setRotation(Math.PI);
+    }
+    if (keys.s) {
+      setPosition(prev => ({ ...prev, z: prev.z + moveSpeed }));
+      setRotation(0);
+    }
+    if (keys.a) {
+      setPosition(prev => ({ ...prev, x: prev.x - moveSpeed }));
+      setRotation(-Math.PI / 2); // Changed from Math.PI / 2
+    }
+    if (keys.d) {
+      setPosition(prev => ({ ...prev, x: prev.x + moveSpeed }));
+      setRotation(Math.PI / 2); // Changed from -Math.PI / 2
+    }
 
     // Handle animations
     if (isMoving) {
@@ -74,9 +88,9 @@ function Model() {
       <primitive 
         ref={modelRef}
         object={scene} 
-        position={[position.x, 0, position.z]} // Changed y position from 1 to 0
+        position={[position.x, 0, position.z]}
         scale={[2, 2, 2]}
-        rotation={[0, Math.PI, 0]}
+        rotation={[0, rotation, 0]}
       />
     </group>
   );
