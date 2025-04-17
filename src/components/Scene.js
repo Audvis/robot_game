@@ -1,5 +1,6 @@
 import { OrbitControls } from '@react-three/drei';
 import Character from './Character';
+import Maze from './Maze';
 
 function Scene() {
   return (
@@ -16,6 +17,7 @@ function Scene() {
         maxDistance={20}
         target={[0, 1, 0]}
       />
+      <Maze />
       <Character />
     </>
   );
