@@ -61,7 +61,7 @@ function Model() {
   const [jumpRequested, setJumpRequested] = useState(false);
   // Estado para guardar el ID del timeout del salto
   const [jumpTimeoutId, setJumpTimeoutId] = useState(null);
-
+ 
   // Constantes de movimiento y física
   const moveSpeed = 0.1;      // Velocidad de movimiento horizontal
   const jumpSpeed = 0.22;     // Velocidad inicial del salto
