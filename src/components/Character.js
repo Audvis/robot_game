@@ -38,91 +38,6 @@ function isColliding(newPos) {
   return false;
 }
 
-// Función para manejar el movimiento horizontal
-function handleHorizontalMovement(keys, isJumping, setPosition, setRotation, moveSpeed, position) {
-  if (!isJumping) {
-    let newPos = { ...position };
-    let moved = false;
-    if (keys.w) {
-      newPos = { ...newPos, z: newPos.z - moveSpeed };
-      setRotation(Math.PI);
-      moved = true;
-    }
-    if (keys.s) {
-      newPos = { ...newPos, z: newPos.z + moveSpeed };
-      setRotation(0);
-      moved = true;
-    }
-    if (keys.a) {
-      newPos = { ...newPos, x: newPos.x - moveSpeed };
-      setRotation(-Math.PI / 2);
-      moved = true;
-    }
-    if (keys.d) {
-      newPos = { ...newPos, x: newPos.x + moveSpeed };
-      setRotation(Math.PI / 2);
-      moved = true;
-    }
-    if (moved && !isColliding(newPos)) {
-      setPosition(newPos);
-    }
-  }
-}
-
-// Función para manejar la solicitud de salto y animación
-function handleJumpRequest({
-  keys, isJumping, jumpRequested, position, groundY, setJumpRequested, actions, setVelocityY, setIsJumping, setJumpTimeoutId, jumpSpeed, jumpDelay
-}) {
-  if (keys.space && !isJumping && !jumpRequested && position.y <= groundY + 0.001) {
-    setJumpRequested(true);
-    if (actions['jump']) {
-      actions['jump'].reset().play();
-      actions['walk']?.stop();
-      actions['idle']?.stop();
-    }
-    const timeoutId = setTimeout(() => {
-      setVelocityY(jumpSpeed);
-      setIsJumping(true);
-      setJumpRequested(false);
-    }, jumpDelay);
-    setJumpTimeoutId(timeoutId);
-  }
-}
-
-// Función para manejar la física del salto
-function handleJumpPhysics({
-  isJumping, position, groundY, setVelocityY, setPosition, velocityY, actions, setIsJumping
-}) {
-  if (isJumping || position.y > groundY) {
-    setVelocityY(vy => vy - 0.012); // gravity
-    setPosition(prev => {
-      const newY = prev.y + velocityY;
-      if (newY <= groundY) {
-        setVelocityY(0);
-        setIsJumping(false); // Permite volver a saltar y moverse
-        if (actions['jump']) {
-          actions['jump'].stop();
-        }
-        return { ...prev, y: groundY };
-      }
-      return { ...prev, y: newY };
-    });
-  }
-}
-
-// Función para controlar las animaciones según el estado
-function handleAnimations({ isJumping, jumpRequested, isMoving, actions }) {
-  if (isJumping || jumpRequested) {
-    // La animación jump ya se maneja en el salto
-  } else if (isMoving) {
-    actions['walk']?.play();
-    actions['idle']?.stop();
-  } else {
-    actions['walk']?.stop();
-    actions['idle']?.play();
-  }
-}
-
 function Model() {
   // Referencias para manipular el grupo y el modelo 3D
   const group = useRef();
@@ -152,7 +67,13 @@ function Model() {
   const jumpSpeed = 0.22;     // Velocidad inicial del salto
   const gravity = 0.012;      // Gravedad que afecta el salto
   const groundY = 0;          // Altura del suelo
-  const jumpDelay = 500;      // Retardo antes de saltar (en ms)
+  const jumpDelay = 0;      // Retardo antes de saltar (en ms)
+
+  // Estado para la rotación del personaje
+  const [rotation, setRotation] = useState(Math.PI);
+
+  // Estado para la velocidad horizontal del salto
+  const [jumpVelocity, setJumpVelocity] = useState({ x: 0, z: 0 });
 
   // Configura las animaciones al cargar el modelo
   useEffect(() => {
@@ -208,21 +129,107 @@ function Model() {
     };
   }, []);
 
-  // Estado para la rotación del personaje
-  const [rotation, setRotation] = useState(Math.PI);
-
   // Lógica principal que se ejecuta en cada frame de renderizado
   useFrame(() => {
     const isMoving = Object.values(keys).some((key, idx) => idx < 4 && key);
 
-    handleHorizontalMovement(keys, isJumping, setPosition, setRotation, moveSpeed, position);
-    handleJumpRequest({
-      keys, isJumping, jumpRequested, position, groundY, setJumpRequested, actions, setVelocityY, setIsJumping, setJumpTimeoutId, jumpSpeed, jumpDelay
-    });
-    handleJumpPhysics({
-      isJumping, position, groundY, setVelocityY, setPosition, velocityY, actions, setIsJumping
-    });
-    handleAnimations({ isJumping, jumpRequested, isMoving, actions });
+    // Movimiento horizontal solo si no está saltando
+    if (!isJumping) {
+      let newPos = { ...position };
+      let moved = false;
+      let dir = { x: 0, z: 0 };
+      if (keys.w) {
+        newPos = { ...newPos, z: newPos.z - moveSpeed };
+        setRotation(Math.PI);
+        dir.z -= 1;
+        moved = true;
+      }
+      if (keys.s) {
+        newPos = { ...newPos, z: newPos.z + moveSpeed };
+        setRotation(0);
+        dir.z += 1;
+        moved = true;
+      }
+      if (keys.a) {
+        newPos = { ...newPos, x: newPos.x - moveSpeed };
+        setRotation(-Math.PI / 2);
+        dir.x -= 1;
+        moved = true;
+      }
+      if (keys.d) {
+        newPos = { ...newPos, x: newPos.x + moveSpeed };
+        setRotation(Math.PI / 2);
+        dir.x += 1;
+        moved = true;
+      }
+      if (moved && !isColliding(newPos)) {
+        setPosition(newPos);
+      }
+    }
+
+    // Salto con dirección
+    if (keys.space && !isJumping && !jumpRequested && position.y <= groundY + 0.001) {
+      setJumpRequested(true);
+      if (actions['jump']) {
+        actions['jump'].reset().play();
+        actions['walk']?.stop();
+        actions['idle']?.stop();
+      }
+      // Calcula la dirección del salto
+      let dir = { x: 0, z: 0 };
+      if (keys.w) dir.z -= 1;
+      if (keys.s) dir.z += 1;
+      if (keys.a) dir.x -= 1;
+      if (keys.d) dir.x += 1;
+      // Normaliza la dirección
+      const length = Math.sqrt(dir.x * dir.x + dir.z * dir.z);
+      let normDir = { x: 0, z: 0 };
+      if (length > 0) {
+        normDir.x = dir.x / length;
+        normDir.z = dir.z / length;
+      }
+      setTimeout(() => {
+        setVelocityY(jumpSpeed);
+        setIsJumping(true);
+        setJumpRequested(false);
+        setJumpVelocity({ x: normDir.x * moveSpeed * 2, z: normDir.z * moveSpeed * 2 });
+      }, jumpDelay);
+    }
+
+    // Física del salto con dirección
+    if (isJumping || position.y > groundY) {
+      setVelocityY(vy => vy - gravity);
+      setPosition(prev => {
+        const newY = prev.y + velocityY;
+        let newX = prev.x + jumpVelocity.x;
+        let newZ = prev.z + jumpVelocity.z;
+        // Checa colisión horizontal en el aire
+        const testPos = { x: newX, y: newY, z: newZ };
+        if (isColliding(testPos)) {
+          newX = prev.x;
+          newZ = prev.z;
+        }
+        if (newY <= groundY) {
+          setVelocityY(0);
+          setIsJumping(false);
+          setJumpVelocity({ x: 0, z: 0 });
+          if (actions['jump']) actions['jump'].stop();
+          return { ...prev, y: groundY, x: newX, z: newZ };
+        }
+        return { ...prev, y: newY, x: newX, z: newZ };
+      });
+    }
+
+    // Animaciones
+    if (isJumping || jumpRequested) {
+      // La animación jump ya se maneja en el salto
+    } else if (isMoving) {
+      actions['walk']?.play();
+      actions['idle']?.stop();
+    } else {
+      actions['walk']?.stop();
+      actions['idle']?.play();
+    }
   });
 
   // Limpia el timeout del salto si el componente se desmonta
